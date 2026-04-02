@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>야구단 라인업 보드</title>
+<link rel="manifest" href="manifest.json">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        /* 기본 화면 스타일 */
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        
+        /* 상단 입력란 스타일 */
+        .header-inputs { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; position: relative; }
+        .top-input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; font-weight: bold; text-align: center; }
+        #tourName { width: 250px; }
+        #teamName { width: 180px; color: #007bff; }
+        #gameDate { width: 150px; font-family: inherit; }
+        
+        /* 라이센스 문구 */
+        .header-brand { position: absolute; right: 0; top: 0; text-align: right; }
+        .license-text { font-size: 12px; color: #555; font-weight: bold; background: #e9ecef; padding: 5px 10px; border-radius: 5px; border: 1px solid #ddd; }
+
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 20px; }
+        .box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); min-height: 85vh; position: relative; }
+        h3 { border-bottom: 2px solid #333; padding-bottom: 10px; margin-top: 0; display: flex; justify-content: space-between; align-items: center; }
+        
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid #ddd; background: #fafafa; margin-bottom: 5px; border-radius: 4px; }
+        input[type="text"], textarea { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { cursor: pointer; padding: 6px 12px; border: none; border-radius: 4px; color: white; font-weight: bold; }
+        
+        .btn-add { background-color: #007bff; }
+        .btn-move { background-color: #28a745; }
+        .btn-del { background-color: #dc3545; }
+        .btn-dark { background-color: #333; width: 100%; padding: 10px; margin-bottom: 5px; }
+        .btn-reset { background-color: #dc3545; width: 100%; padding: 10px; margin-top: 10px; }
+        .btn-sm { padding: 4px 8px; font-size: 12px; margin: 0 2px; }
+        
+        .badge { background: #333; color: yellow; padding: 2px 6px; border-radius: 10px; font-size: 12px; font-weight: bold; margin-left: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 8px 3px; border-bottom: 1px solid #eee; text-align: center; font-size: 14px; }
+        .name-slot { font-weight: bold; color: #007bff; min-width: 50px; display: inline-block; border-bottom: 2px solid #ddd; min-height: 20px; }
+        .num-slot { color: #555; font-weight: bold; min-width: 30px; display: inline-block; border-bottom: 2px solid #ddd; min-height: 20px; }
+        select { padding: 4px; border-radius: 4px; border: 1px solid #ccc; }
+
+        .footer-btns { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 100; }
+        .btn-large { padding: 15px 25px; border-radius: 50px; font-size: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+
+        /* 그라운드 뷰 스타일 */
+        .ground-wrapper { margin-top: 20px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .field-container { 
+            position: relative; width: 100%; max-width: 700px; height: 450px; margin: 0 auto; 
+            background: linear-gradient(to top, #4CAF50 0%, #2E7D32 100%); 
+            border-radius: 10px 10px 250px 250px; overflow: hidden; border: 3px solid #1B5E20; 
+        }
+        .diamond { 
+            position: absolute; bottom: 30px; left: 50%; width: 220px; height: 220px; 
+            background-color: #8D6E63; transform: translateX(-50%) rotate(45deg); border-radius: 10px; border: 2px solid #fff;
+        }
+        .pos-badge { 
+            position: absolute; transform: translate(-50%, 50%); text-align: center; background: rgba(255,255,255,0.95); 
+            padding: 5px 10px; border-radius: 8px; font-size: 13px; border: 2px solid #333; min-width: 60px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 10;
+        }
+        .pos-badge .pos-title { font-weight: 900; color: #d32f2f; display: block; border-bottom: 1px solid #ccc; margin-bottom: 2px; }
+        .pos-badge .p-name { font-weight: bold; color: #007bff; }
+        
+        #field-C  { bottom: 5%; left: 50%; }
+        #field-P  { bottom: 35%; left: 50%; }
+        #field-1B { bottom: 35%; left: 75%; }
+        #field-2B { bottom: 55%; left: 63%; }
+        #field-SS { bottom: 55%; left: 37%; }
+        #field-3B { bottom: 35%; left: 25%; }
+        #field-LF { bottom: 75%; left: 20%; }
+        #field-CF { bottom: 85%; left: 50%; }
+        #field-RF { bottom: 75%; left: 80%; }
+
+        .extra-zone { display: flex; justify-content: space-between; max-width: 700px; margin: 15px auto 0; gap: 15px; }
+        .dh-box, .bench-box { background: #fff; border: 2px solid #ddd; padding: 10px 15px; border-radius: 8px; font-size: 14px; }
+        .dh-box { width: 120px; text-align: center; border-color: #ff9800; }
+        .bench-box { flex-grow: 1; border-color: #607d8b; }
+        .zone-title { font-weight: bold; margin-bottom: 5px; color: #333; display: block; }
+        
+        /* 출력 전용 스타일 (A4 가로 3분할) */
+        #printArea { display: none; }
+        
+        @media print {
+            @page { size: A4 landscape; margin: 5mm; }
+            body { background: white; padding: 0; margin: 0; }
+            .header-inputs, .grid-container, .ground-wrapper, .footer-btns { display: none !important; }
+            
+            #printArea { 
+                display: flex !important; justify-content: space-between; width: 100%; height: 100%;
+            }
+            .print-card { 
+                width: 32%; border: 2px solid #000; padding: 10px; box-sizing: border-box; font-family: 'Malgun Gothic', sans-serif; page-break-inside: avoid;
+            }
+            .print-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 13px; }
+            .print-table th, .print-table td { border: 1px solid #000; padding: 6px 2px; text-align: center; }
+            .print-table th { background-color: #f0f0f0; }
+            .h-25 { height: 26px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-inputs">
+        <input type="text" id="tourName" class="top-input" placeholder="대회명 (예: 2026 시민리그)">
+        <input type="text" id="teamName" class="top-input" value="CNC 워리어스" placeholder="팀 이름">
+        <input type="date" id="gameDate" class="top-input">
+        
+        <div class="header-brand">
+            <div class="license-text">라이센스: CNC워리어스<br>※ 수정 및 배포 가능</div>
+        </div>
+    </div>
+
+    <div class="grid-container">
+        
+        <div class="box">
+            <h3>1. 선수단 명단</h3>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="nameInput" placeholder="예: 배경건02 (이름+배번)">
+                <button type="button" class="btn-add" onclick="addSingle()">추가</button>
+            </div>
+            <textarea id="bulkInput" rows="4" placeholder="외부 명단 붙여넣기&#10;(줄바꿈, 띄어쓰기 인식)"></textarea>
+            <button type="button" class="btn-dark" onclick="addBulk()">명단 일괄 불러오기</button>
+            <button type="button" class="btn-reset" style="margin-top:0;" onclick="resetPool1()">전체 명단 삭제 (완전 비우기)</button>
+            <div id="pool1" style="margin-top:15px;"></div>
+        </div>
+
+        <div class="box">
+            <h3>2. 경기 참석자</h3>
+            <button type="button" class="btn-reset" style="margin-top:0; margin-bottom:15px;" onclick="resetPool2()">참석자 전체 초기화 (1번으로 복구)</button>
+            <div id="pool2"></div>
+        </div>
+
+        <div class="box">
+            <h3>3. 선발 라인업 & 수비</h3>
+            <table>
+                <thead>
+                    <tr style="background:#eee;">
+                        <th width="35">타순</th>
+                        <th width="65">포지션</th>
+                        <th>이름</th>
+                        <th width="40">배번</th>
+                        <th width="65">순서</th>
+                        <th width="35">X</th>
+                    </tr>
+                </thead>
+                <tbody id="lineupTable">
+                    <tr>
+                        <td><b>1번</b></td>
+                        <td><select id="pos-1" onchange="syncPitcher(this, 1); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-1" data-num=""></span></td>
+                        <td><span class="num-slot" id="num-1"></span></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-1')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-1')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-1')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>2번</b></td>
+                        <td><select id="pos-2" onchange="syncPitcher(this, 2); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-2" data-num=""></span></td>
+                        <td><span class="num-slot" id="num-2"></span></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-2')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-2')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-2')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>3번</b></td>
+                        <td><select id="pos-3" onchange="syncPitcher(this, 3); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-3" data-num=""></span></td>
+                        <td><span class="num-slot" id="num-3"></span></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-3')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-3')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-3')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>4번</b></td>
+                        <td><select id="pos-4" onchange="syncPitcher(this, 4); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-4" data-num=""></span></td>
+                        <td><span class="num-slot" id="num-4"></span></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-4')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-4')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-4')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>5번</b></td>
+                        <td><select id="pos-5" onchange="syncPitcher(this, 5); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-5" data-num=""></span></td>
+                        <td><span class="num-slot" id="num-5"></span></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-5')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-5')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-5')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>6번</b></td>
+                        <td><select id="pos-6" onchange="syncPitcher(this, 6); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-6" data-num=""></span></td>
+                        <td><span class="num-slot" id="num-6"></span></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-6')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-6')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-6')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>7번</b></td>
+                        <td><select id="pos-7" onchange="syncPitcher(this, 7); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-7" data-num=""></span></td>
+                        <td><span class="num-slot" id="num-7"></span></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-7')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-7')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-7')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>8번</b></td>
+                        <td><select id="pos-8" onchange="syncPitcher(this, 8); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-8" data-num=""></span></td>
+                        <td><span class="num-slot" id="num-8"></span></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-8')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-8')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-8')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>9번</b></td>
+                        <td><select id="pos-9" onchange="syncPitcher(this, 9); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-9" data-num=""></span></td>
+                        <td><span class="num-slot" id="num-9"></span></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-9')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-9')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-9')">X</button></td>
+                    </tr>
+                    
+                    <tr style="background:#fff0f0; border-top:2px solid #ffcccc;">
+                        <td><b style="color:red;">투수(P)</b></td>
+                        <td><select><option>P</option></select></td>
+                        <td><span class="name-slot" id="slot-P" data-num=""></span></td>
+                        <td><span class="num-slot" id="num-P"></span></td>
+                        <td>-</td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-P')">X</button></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top:20px;">대기 명단</h3>
+            <div id="benchPool"></div>
+            <button type="button" class="btn-dark" style="margin-top:10px; background:#6c757d;" onclick="addBench()">+ 대기 슬롯 추가</button>
+            <button type="button" class="btn-reset" onclick="resetLineup()">라인업 초기화 (참석자로 돌려보내기)</button>
+        </div>
+    </div>
+
+    <div class="ground-wrapper">
+        <h3>4. 그라운드 뷰 (수비 위치 및 대기 확인)</h3>
+        <div class="field-container">
+            <div class="diamond"></div>
+            <div class="pos-badge" id="field-C"><span class="pos-title">C (포수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-P"><span class="pos-title">P (투수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-1B"><span class="pos-title">1B (1루수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-2B"><span class="pos-title">2B (2루수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-SS"><span class="pos-title">SS (유격수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-3B"><span class="pos-title">3B (3루수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-LF"><span class="pos-title">LF (좌익수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-CF"><span class="pos-title">CF (중견수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-RF"><span class="pos-title">RF (우익수)</span><span class="p-name"></span></div>
+        </div>
+        <div class="extra-zone">
+            <div class="dh-box">
+                <span class="zone-title" style="color:#ff9800;">지명타자 (DH)</span>
+                <span id="field-DH" class="p-name" style="font-weight:bold; color:#333;"></span>
+            </div>
+            <div class="bench-box">
+                <span class="zone-title" style="color:#607d8b;">대기 인원 (벤치)</span>
+                <span id="field-bench" class="p-name" style="color:#555;"></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="printArea"></div>
+
+    <div class="footer-btns">
+        <button type="button" class="btn-large" style="background-color: #333; color: white;" onclick="saveToFile()">내용 파일로 저장</button>
+        <button type="button" class="btn-large" style="background-color: #28a745; color: white;" onclick="prepareAndPrint()">PDF로 저장 (인쇄)</button>
+    </div>
+
+    <script>
+        function parseNameNum(raw) {
+            var str = raw.trim();
+            var match = str.match(/^([^\d]+)(\d*)$/);
+            if(match) return { name: match[1].trim(), num: match[2] };
+            return { name: str, num: "" };
+        }
+
+        document.getElementById('nameInput').addEventListener('keypress', function(e) {
+            if(e.key === 'Enter') addSingle();
+        });
+
+        function addSingle() {
+            var input = document.getElementById('nameInput');
+            if(input.value.trim() !== '') {
+                createItemInPool1(input.value.trim());
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        function addBulk() {
+            var txt = document.getElementById('bulkInput').value;
+            var names = txt.split(/[\s,]+/);
+            for(var i = 0; i < names.length; i++) {
+                if(names[i].trim() !== '') createItemInPool1(names[i].trim());
+            }
+            document.getElementById('bulkInput').value = '';
+        }
+
+        function resetPool1() {
+            if(confirm("전체 선수단 명단을 모두 삭제하시겠습니까?\n(오른쪽으로 넘어간 인원은 유지됩니다)")) {
+                document.getElementById('pool1').innerHTML = '';
+            }
+        }
+
+        function resetPool2() {
+            if(confirm("참석자 명단을 초기화하시겠습니까?\n(이 곳에 있는 선수들이 1번 '전체 명단'으로 돌아갑니다)")) {
+                var pool2 = document.getElementById('pool2');
+                var items = pool2.querySelectorAll('.item');
+                for(var i = 0; i < items.length; i++) {
+                    var nameEl = items[i].querySelector('.player-name');
+                    var numEl = items[i].querySelector('.badge');
+                    var name = nameEl ? nameEl.innerText : '';
+                    var num = numEl ? numEl.innerText : '';
+                    if(name) {
+                        createItemInPool1(name + num);
+                    }
+                }
+                pool2.innerHTML = '';
+            }
+        }
+
+        function removePlayerFromPool1(btnElement) {
+            btnElement.parentNode.parentNode.remove();
+        }
+
+        function createItemInPool1(rawStr) {
+            var data = parseNameNum(rawStr);
+            var div = document.createElement('div');
+            div.className = 'item';
+            var numHtml = data.num ? `<span class="badge">${data.num}</span>` : '';
+            
+            div.innerHTML = `
+                <div><span style="font-weight:bold;">${data.name}</span> ${numHtml}</div>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn-move" style="padding:4px 8px;" onclick="moveToPool2('${data.name}', '${data.num}', this.parentNode.parentNode)">참석</button>
+                    <button class="btn-del" style="padding:4px 8px;" onclick="removePlayerFromPool1(this)">X</button>
+                </div>
+            `;
+            document.getElementById('pool1').appendChild(div);
+        }
+
+        function moveToPool2(name, num, element) {
+            element.remove();
+            createItemInPool2(name, num);
+        }
+
+        function createItemInPool2(name, num) {
+            var div = document.createElement('div');
+            div.className = 'item';
+            
+            var options = '<option value="auto">자동 빈자리</option>';
+            for(var i = 1; i <= 9; i++) options += `<option value="slot-${i}">${i}번 타자</option>`;
+            options += '<option value="slot-P">투수 (단독)</option>';
+            
+            var benches = document.querySelectorAll('.bench-name');
+            for(var j = 0; j < benches.length; j++) {
+                options += `<option value="${benches[j].id}">대기 ${j + 1}번</option>`;
+            }
+
+            var numHtml = num ? `<span class="badge">${num}</span>` : '';
+
+            div.innerHTML = `
+                <div style="min-width:70px;"><span class="player-name" style="font-weight:bold; color:#007bff;">${name}</span> ${numHtml}</div>
+                <div style="display:flex; gap:5px; align-items:center;">
+                    <select class="target-select">${options}</select>
+                    <button class="btn-add" style="padding:4px 8px;" onclick="assignLineup('${name}', '${num}', this.parentNode.parentNode)">이동</button>
+                    <button class="btn-del" style="padding:4px 8px;" onclick="backToPool1('${name}${num}', this.parentNode.parentNode)">X</button>
+                </div>
+            `;
+            document.getElementById('pool2').appendChild(div);
+        }
+
+        function backToPool1(rawStr, element) {
+            element.remove();
+            createItemInPool1(rawStr);
+        }
+
+        function assignLineup(name, num, element) {
+            var selectVal = element.querySelector('.target-select').value;
+            var targetSlot = null;
+
+            if (selectVal === 'auto') {
+                for(var i = 1; i <= 9; i++) {
+                    var s = document.getElementById('slot-' + i);
+                    if(s && s.innerText === '') { targetSlot = s; break; }
+                }
+                if(!targetSlot) {
+                    var p = document.getElementById('slot-P');
+                    if(p && p.innerText === '') targetSlot = p;
+                }
+                if(!targetSlot) {
+                    var benches = document.querySelectorAll('.bench-name');
+                    for(var j = 0; j < benches.length; j++) {
+                        if(benches[j].innerText === '') { targetSlot = benches[j]; break; }
+                    }
+                }
+            } else {
+                targetSlot = document.getElementById(selectVal);
+                if(targetSlot && targetSlot.innerText !== '') {
+                    alert('해당 자리에 이미 선수가 있습니다. X를 눌러 비워주세요.');
+                    return;
+                }
+            }
+
+            if(targetSlot) {
+                targetSlot.innerText = name;
+                targetSlot.setAttribute('data-num', num);
+                
+                var numSlotId = targetSlot.id.replace('slot-', 'num-').replace('bench-', 'bench-num-');
+                var numSlot = document.getElementById(numSlotId);
+                if(numSlot) numSlot.innerText = num;
+
+                element.remove();
+                refreshPitcherSync();
+                updateFieldView();
+            } else {
+                alert('자리를 찾을 수 없습니다.');
+            }
+        }
+
+        function syncPitcher(selectEl, slotNum) {
+            if(selectEl.value === 'P') {
+                var nameSlot = document.getElementById('slot-' + slotNum);
+                var playerName = nameSlot.innerText;
+                var playerNum = nameSlot.getAttribute('data-num');
+                
+                if(playerName !== '') {
+                    document.getElementById('slot-P').innerText = playerName;
+                    document.getElementById('slot-P').setAttribute('data-num', playerNum);
+                    document.getElementById('num-P').innerText = playerNum;
+                }
+            }
+        }
+
+        function refreshPitcherSync() {
+            for(var i = 1; i <= 9; i++) {
+                var posSel = document.getElementById('pos-' + i);
+                if(posSel && posSel.value === 'P') {
+                    var nameSlot = document.getElementById('slot-' + i);
+                    if(nameSlot.innerText !== '') {
+                        document.getElementById('slot-P').innerText = nameSlot.innerText;
+                        document.getElementById('slot-P').setAttribute('data-num', nameSlot.getAttribute('data-num'));
+                        document.getElementById('num-P').innerText = nameSlot.getAttribute('data-num');
+                    }
+                }
+            }
+        }
+
+        function removeFromLineup(slotId) {
+            var slot = document.getElementById(slotId);
+            if(slot && slot.innerText !== '') {
+                var name = slot.innerText;
+                var num = slot.getAttribute('data-num') || '';
+                
+                slot.innerText = '';
+                slot.setAttribute('data-num', '');
+                
+                var numSlotId = slotId.replace('slot-', 'num-').replace('bench-', 'bench-num-');
+                var numSlot = document.getElementById(numSlotId);
+                if(numSlot) numSlot.innerText = '';
+                
+                if(slotId.startsWith('slot-') && slotId !== 'slot-P') {
+                    var posNum = slotId.split('-')[1];
+                    var posSel = document.getElementById('pos-' + posNum);
+                    if(posSel) posSel.value = '-';
+                }
+
+                createItemInPool2(name, num);
+                updateFieldView();
+            }
+        }
+
+        function getMovementSequence() {
+            var seq = [];
+            for(var i = 1; i <= 9; i++) seq.push('slot-' + i);
+            var benches = document.querySelectorAll('.bench-name');
+            for(var j = 0; j < benches.length; j++) seq.push(benches[j].id);
+            return seq;
+        }
+
+        function moveUp(slotId) {
+            var seq = getMovementSequence();
+            var index = seq.indexOf(slotId);
+            if(index > 0) swapData(seq[index], seq[index - 1]);
+        }
+
+        function moveDown(slotId) {
+            var seq = getMovementSequence();
+            var index = seq.indexOf(slotId);
+            if(index !== -1 && index < seq.length - 1) swapData(seq[index], seq[index + 1]);
+        }
+
+        function swapData(id1, id2) {
+            var slot1 = document.getElementById(id1);
+            var slot2 = document.getElementById(id2);
+            var num1Slot = document.getElementById(id1.replace('slot-', 'num-').replace('bench-', 'bench-num-'));
+            var num2Slot = document.getElementById(id2.replace('slot-', 'num-').replace('bench-', 'bench-num-'));
+
+            var tempName = slot1.innerText;
+            slot1.innerText = slot2.innerText;
+            slot2.innerText = tempName;
+
+            var tempNumAttr = slot1.getAttribute('data-num');
+            slot1.setAttribute('data-num', slot2.getAttribute('data-num'));
+            slot2.setAttribute('data-num', tempNumAttr);
+
+            if(num1Slot && num2Slot) {
+                var tempNum = num1Slot.innerText;
+                num1Slot.innerText = num2Slot.innerText;
+                num2Slot.innerText = tempNum;
+            }
+            refreshPitcherSync();
+            updateFieldView();
+        }
+
+        function resetLineup() {
+            if(confirm("선발 라인업과 대기 명단을 모두 비우시겠습니까?\n(선수들은 2번 '경기 참석자' 칸으로 돌아갑니다)")) {
+                for(var i = 1; i <= 9; i++) removeFromLineup('slot-' + i);
+                removeFromLineup('slot-P');
+                var benches = document.querySelectorAll('.bench-name');
+                for(var j = 0; j < benches.length; j++) removeFromLineup(benches[j].id);
+                updateFieldView();
+            }
+        }
+
+        /* --- 업데이트된 대기 슬롯 로직 --- */
+        var benchIndex = 0;
+
+        function addBench() {
+            benchIndex++;
+            var slotId = 'bench-' + benchIndex;
+            var numSlotId = 'bench-num-' + benchIndex;
+            var div = document.createElement('div');
+            div.className = 'item';
+            div.style.padding = '4px 10px';
+            div.innerHTML = `
+                <table style="margin:0; width:100%; border:none;">
+                    <tr>
+                        <td style="border:none; width:60px; text-align:left;">대기 ${benchIndex}</td>
+                        <td style="border:none;"><span class="name-slot bench-name" id="${slotId}" data-num=""></span></td>
+                        <td style="border:none; width:40px;"><span class="num-slot" id="${numSlotId}"></span></td>
+                        <td style="border:none; width:65px;"><button class="btn-dark btn-sm" onclick="moveUp('${slotId}')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('${slotId}')">▼</button></td>
+                        <td style="border:none; width:35px;"><button class="btn-del btn-sm" onclick="removeFromLineup('${slotId}')">X</button></td>
+                    </tr>
+                </table>
+            `;
+            document.getElementById('benchPool').appendChild(div);
+        }
+
+        function updateFieldView() {
+            var positions = ['C', 'P', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+            positions.forEach(function(p) {
+                var el = document.getElementById('field-' + p);
+                if(el) el.querySelector('.p-name').innerText = '';
+            });
+            document.getElementById('field-DH').innerText = '';
+            document.getElementById('field-bench').innerText = '';
+
+            for(var i=1; i<=9; i++) {
+                var pos = document.getElementById('pos-'+i).value;
+                var name = document.getElementById('slot-'+i).innerText;
+                var num = document.getElementById('slot-'+i).getAttribute('data-num') || '';
+                var displayName = num ? name + '(' + num + ')' : name;
+
+                if(pos !== '-' && name !== '') {
+                    if(pos === 'DH') {
+                        document.getElementById('field-DH').innerText = displayName;
+                    } else if(pos !== 'P') {
+                        var fieldEl = document.getElementById('field-' + pos);
+                        if(fieldEl) {
+                            fieldEl.querySelector('.p-name').innerText = displayName;
+                        }
+                    }
+                }
+            }
+
+            var pName = document.getElementById('slot-P').innerText;
+            var pNum = document.getElementById('slot-P').getAttribute('data-num') || '';
+            if(pName !== '') {
+               var pDisplayName = pNum ? pName + '(' + pNum + ')' : pName;
+               var pField = document.getElementById('field-P');
+               if(pField) pField.querySelector('.p-name').innerText = pDisplayName;
+            }
+
+            var benchArray = [];
+            var benches = document.querySelectorAll('.bench-name');
+            benches.forEach(function(b) {
+                if(b.innerText !== '') {
+                    var bNum = b.getAttribute('data-num') || '';
+                    benchArray.push(bNum ? b.innerText + '(' + bNum + ')' : b.innerText);
+                }
+            });
+            document.getElementById('field-bench').innerText = benchArray.join(', ');
+        }
+
+        window.onload = function() {
+            // 저장된 HTML에서 불러올 때 대기 인덱스 맞추기
+            var existingBenches = document.querySelectorAll('.bench-name');
+            if(existingBenches.length === 0) {
+                // 처음 열었을 때는 기본 3개 생성
+                addBench(); addBench(); addBench();
+            } else {
+                // 저장된 파일일 경우, 가장 높은 번호를 찾아 이어서 생성하게 함
+                existingBenches.forEach(function(b) {
+                    var num = parseInt(b.id.replace('bench-', ''));
+                    if(!isNaN(num) && num > benchIndex) {
+                        benchIndex = num;
+                    }
+                });
+            }
+            updateFieldView();
+        };
+
+        function saveToFile() {
+            var html = document.documentElement.outerHTML;
+            var blob = new Blob([html], {type: "text/html;charset=utf-8"});
+            var a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "CNC_라인업보드.html";
+            a.click();
+        }
+
+        function prepareAndPrint() {
+            var teamName = document.getElementById('teamName').value || 'CNC 워리어스';
+            var tourName = document.getElementById('tourName').value || '';
+            
+            var dateVal = document.getElementById('gameDate').value;
+            var printDate = "년 월 일";
+            if(dateVal) {
+                var parts = dateVal.split('-');
+                if(parts.length === 3) {
+                    printDate = parts[0] + "년 " + parseInt(parts[1]) + "월 " + parseInt(parts[2]) + "일";
+                }
+            }
+
+            var printArea = document.getElementById('printArea');
+            
+            var lineupRows = '';
+            for(var i=1; i<=9; i++) {
+                var pos = document.getElementById('pos-'+i).value;
+                if(pos === '-') pos = '';
+                var name = document.getElementById('slot-'+i).innerText;
+                var num = document.getElementById('slot-'+i).getAttribute('data-num') || '';
+                lineupRows += `<tr class="h-25"><td>${i}</td><td>${pos}</td><td>${name}</td><td>${num}</td><td></td></tr>`;
+            }
+            
+            var pName = document.getElementById('slot-P').innerText;
+            var pNum = document.getElementById('slot-P').getAttribute('data-num') || '';
+            lineupRows += `<tr class="h-25"><td>P</td><td>P</td><td>${pName}</td><td>${pNum}</td><td></td></tr>`;
+
+            var benchRows = '';
+            var benches = document.querySelectorAll('.bench-name');
+            for(var k=0; k<6; k++) {
+                var bName = '', bNum = '';
+                if(k < benches.length && benches[k].innerText !== '') {
+                    bName = benches[k].innerText;
+                    bNum = benches[k].getAttribute('data-num') || '';
+                }
+                benchRows += `<tr class="h-25"><td>${k+1}</td><td></td><td>${bName}</td><td>${bNum}</td><td></td></tr>`;
+            }
+
+            var cardHTML = `
+                <div class="print-card">
+                    <table class="print-table">
+                        <tr><th width="30%">대회명</th><td colspan="3">${tourName}</td></tr>
+                        <tr><th>팀 명</th><td colspan="3" style="font-weight:bold; font-size:16px;">${teamName}</td></tr>
+                        <tr><th>일 시</th><td colspan="3">${printDate}</td></tr>
+                    </table>
+                    
+                    <table class="print-table">
+                        <tr><th width="15%">타순</th><th width="20%">수비위치</th><th width="30%">성 명</th><th width="15%">배번</th><th>비고</th></tr>
+                        ${lineupRows}
+                    </table>
+
+                    <table class="print-table">
+                        <tr><th width="15%">순번</th><th width="20%">수비위치</th><th width="30%">성 명</th><th width="15%">배번</th><th>비고</th></tr>
+                        ${benchRows}
+                    </table>
+                </div>
+            `;
+
+            printArea.innerHTML = cardHTML + cardHTML + cardHTML;
+            window.print();
+        }
+    </script>
+</body>
+</html>
