@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>야구단 라인업 보드</title>
+<link rel="manifest" href="manifest.json">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        /* 기본 화면 스타일 */
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        
+        /* 상단 입력란 스타일 */
+        .header-inputs { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; position: relative; }
+        .top-input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; font-weight: bold; text-align: center; }
+        #tourName { width: 250px; }
+        #teamName { width: 180px; color: #007bff; }
+        #gameDate { width: 150px; font-family: inherit; }
+        
+        /* 라이센스 문구 */
+        .header-brand { position: absolute; right: 0; top: 0; text-align: right; }
+        .license-text { font-size: 12px; color: #555; font-weight: bold; background: #e9ecef; padding: 5px 10px; border-radius: 5px; border: 1px solid #ddd; }
+
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr 1.7fr; gap: 20px; }
+        .box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); min-height: 85vh; position: relative; }
+        h3 { border-bottom: 2px solid #333; padding-bottom: 10px; margin-top: 0; display: flex; justify-content: space-between; align-items: center; }
+        
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid #ddd; background: #fafafa; margin-bottom: 5px; border-radius: 4px; }
+        input[type="text"], textarea { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { cursor: pointer; padding: 6px 12px; border: none; border-radius: 4px; color: white; font-weight: bold; }
+        
+        .btn-add { background-color: #007bff; }
+        .btn-move { background-color: #28a745; }
+        .btn-del { background-color: #dc3545; }
+        .btn-dark { background-color: #333; width: 100%; padding: 10px; margin-bottom: 5px; }
+        .btn-blue-outline { background-color: #17a2b8; width: 100%; padding: 10px; }
+        .btn-reset { background-color: #dc3545; width: 100%; padding: 10px; margin-top: 10px; }
+        .btn-sm { padding: 4px 8px; font-size: 12px; margin: 0 2px; }
+        
+        .badge { background: #333; color: yellow; padding: 2px 6px; border-radius: 10px; font-size: 12px; font-weight: bold; margin-left: 3px; }
+        .badge-avg { background: #17a2b8; color: white; }
+        
+        table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+        th, td { padding: 8px 2px; border-bottom: 1px solid #eee; text-align: center; font-size: 13px; }
+        .name-slot { font-weight: bold; color: #007bff; min-width: 45px; display: inline-block; border-bottom: 2px solid #ddd; min-height: 20px; }
+        .num-slot { color: #555; font-weight: bold; min-width: 20px; display: inline-block; border-bottom: 2px solid #ddd; min-height: 20px; }
+        .avg-slot { color: #17a2b8; font-weight: bold; font-size: 12px; min-width: 35px; display: inline-block; }
+        select { padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-size: 12px;}
+        .status-select { width: 100%; padding: 4px 0; font-size: 12px; text-align: center; }
+
+        .footer-btns { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 100; }
+        .btn-large { padding: 15px 25px; border-radius: 50px; font-size: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+
+        /* 그라운드 뷰 스타일 */
+        .ground-wrapper { margin-top: 20px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .field-container { 
+            position: relative; width: 100%; max-width: 700px; height: 450px; margin: 0 auto; 
+            background: linear-gradient(to top, #4CAF50 0%, #2E7D32 100%); 
+            border-radius: 10px 10px 250px 250px; overflow: hidden; border: 3px solid #1B5E20; 
+        }
+        .diamond { 
+            position: absolute; bottom: 30px; left: 50%; width: 220px; height: 220px; 
+            background-color: #8D6E63; transform: translateX(-50%) rotate(45deg); border-radius: 10px; border: 2px solid #fff;
+        }
+        .pos-badge { 
+            position: absolute; transform: translate(-50%, 50%); text-align: center; background: rgba(255,255,255,0.95); 
+            padding: 5px 10px; border-radius: 8px; font-size: 13px; border: 2px solid #333; min-width: 60px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 10;
+        }
+        .pos-badge .pos-title { font-weight: 900; color: #d32f2f; display: block; border-bottom: 1px solid #ccc; margin-bottom: 2px; }
+        .pos-badge .p-name { font-weight: bold; color: #007bff; }
+        
+        #field-C  { bottom: 5%; left: 50%; }
+        #field-P  { bottom: 35%; left: 50%; }
+        #field-1B { bottom: 35%; left: 75%; }
+        #field-2B { bottom: 55%; left: 63%; }
+        #field-SS { bottom: 55%; left: 37%; }
+        #field-3B { bottom: 35%; left: 25%; }
+        #field-LF { bottom: 75%; left: 20%; }
+        #field-CF { bottom: 85%; left: 50%; }
+        #field-RF { bottom: 75%; left: 80%; }
+
+        .extra-zone { display: flex; justify-content: space-between; max-width: 700px; margin: 15px auto 0; gap: 15px; }
+        .dh-box, .bench-box { background: #fff; border: 2px solid #ddd; padding: 10px 15px; border-radius: 8px; font-size: 14px; }
+        .dh-box { width: 120px; text-align: center; border-color: #ff9800; }
+        .bench-box { flex-grow: 1; border-color: #607d8b; }
+        .zone-title { font-weight: bold; margin-bottom: 5px; color: #333; display: block; }
+        
+        /* 출력 전용 스타일 */
+        #printArea { display: none; }
+        
+        @media print {
+            @page { size: A4 landscape; margin: 5mm; }
+            body { background: white; padding: 0; margin: 0; }
+            .header-inputs, .grid-container, .ground-wrapper, .footer-btns { display: none !important; }
+            
+            #printArea { display: flex !important; justify-content: space-between; width: 100%; height: 100%; }
+            .print-card { width: 32%; border: 2px solid #000; padding: 5px 8px; box-sizing: border-box; font-family: 'Malgun Gothic', sans-serif; page-break-inside: avoid; }
+            .print-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; }
+            .print-table th, .print-table td { border: 1px solid #000; padding: 2px 1px; text-align: center; }
+            .print-table th { background-color: #f0f0f0; }
+            .h-25 { height: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-inputs">
+        <input type="text" id="tourName" class="top-input" placeholder="대회명 (예: 2026 시민리그)">
+        <input type="text" id="teamName" class="top-input" value="CNC 워리어스" placeholder="팀 이름">
+        <input type="date" id="gameDate" class="top-input">
+        
+        <div class="header-brand">
+            <div class="license-text">라이센스: CNC워리어스<br>※ 수정 및 배포 가능</div>
+        </div>
+    </div>
+
+    <div class="grid-container">
+        
+        <div class="box">
+            <h3>1. 선수단 명단</h3>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="nameInput" placeholder="예: John Doe 15 0.350">
+                <button type="button" class="btn-add" onclick="addSingle()">추가</button>
+            </div>
+            <textarea id="bulkInput" rows="4" placeholder="복사해서 붙여넣기&#10;(이름만 써도, 섞어 써도 알아서 분리합니다!)"></textarea>
+            <button type="button" class="btn-dark" onclick="addBulk()">명단 일괄 불러오기</button>
+            
+            <div style="display:flex; justify-content: space-between; align-items:center; margin-top:10px;">
+                <button type="button" class="btn-reset" style="margin:0; padding:6px 10px; width:auto;" onclick="resetPool1()">전체 명단 삭제 (비우기)</button>
+                <button type="button" class="btn-dark btn-sm" style="margin:0; background:#007bff; padding:6px 10px;" onclick="sortPool1()">이름순 정렬</button>
+            </div>
+
+            <div id="pool1" style="margin-top:15px;"></div>
+        </div>
+
+        <div class="box">
+            <h3>2. 경기 참석자</h3>
+            
+            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
+                <button type="button" class="btn-reset" style="margin:0; padding:6px 10px; width:auto;" onclick="resetPool2()">참석 취소(1번으로)</button>
+                <div style="display:flex; gap:5px;">
+                    <button type="button" class="btn-dark btn-sm" style="margin:0; background:#007bff; padding:6px 10px;" onclick="sortPool2('name')">이름순 정렬</button>
+                    <button type="button" class="btn-dark btn-sm" style="margin:0; background:#28a745; padding:6px 10px;" onclick="sortPool2('avg')">타율순 정렬</button>
+                </div>
+            </div>
+
+            <div id="pool2"></div>
+        </div>
+
+        <div class="box">
+            <h3>3. 선발 라인업 & 수비</h3>
+            <table id="mainTable">
+                <thead>
+                    <tr style="background:#eee;">
+                        <th width="35">타순</th>
+                        <th width="55">포지션</th>
+                        <th>이름</th>
+                        <th width="30">배번</th>
+                        <th width="40">타율</th>
+                        <th width="50">구분</th>
+                        <th width="65">순서</th>
+                        <th width="30">X</th>
+                    </tr>
+                </thead>
+                <tbody id="lineupTable">
+                    <tr>
+                        <td><b>1번</b></td>
+                        <td><select id="pos-1" onchange="syncPitcher(this, 1); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-1" data-num="" data-avg=""></span></td>
+                        <td><span class="num-slot" id="num-1"></span></td>
+                        <td><span class="avg-slot" id="avg-1"></span></td>
+                        <td><select id="status-1" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-1')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-1')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-1')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>2번</b></td>
+                        <td><select id="pos-2" onchange="syncPitcher(this, 2); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-2" data-num="" data-avg=""></span></td>
+                        <td><span class="num-slot" id="num-2"></span></td>
+                        <td><span class="avg-slot" id="avg-2"></span></td>
+                        <td><select id="status-2" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-2')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-2')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-2')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>3번</b></td>
+                        <td><select id="pos-3" onchange="syncPitcher(this, 3); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-3" data-num="" data-avg=""></span></td>
+                        <td><span class="num-slot" id="num-3"></span></td>
+                        <td><span class="avg-slot" id="avg-3"></span></td>
+                        <td><select id="status-3" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-3')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-3')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-3')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>4번</b></td>
+                        <td><select id="pos-4" onchange="syncPitcher(this, 4); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-4" data-num="" data-avg=""></span></td>
+                        <td><span class="num-slot" id="num-4"></span></td>
+                        <td><span class="avg-slot" id="avg-4"></span></td>
+                        <td><select id="status-4" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-4')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-4')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-4')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>5번</b></td>
+                        <td><select id="pos-5" onchange="syncPitcher(this, 5); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-5" data-num="" data-avg=""></span></td>
+                        <td><span class="num-slot" id="num-5"></span></td>
+                        <td><span class="avg-slot" id="avg-5"></span></td>
+                        <td><select id="status-5" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-5')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-5')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-5')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>6번</b></td>
+                        <td><select id="pos-6" onchange="syncPitcher(this, 6); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-6" data-num="" data-avg=""></span></td>
+                        <td><span class="num-slot" id="num-6"></span></td>
+                        <td><span class="avg-slot" id="avg-6"></span></td>
+                        <td><select id="status-6" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-6')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-6')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-6')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>7번</b></td>
+                        <td><select id="pos-7" onchange="syncPitcher(this, 7); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-7" data-num="" data-avg=""></span></td>
+                        <td><span class="num-slot" id="num-7"></span></td>
+                        <td><span class="avg-slot" id="avg-7"></span></td>
+                        <td><select id="status-7" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-7')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-7')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-7')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>8번</b></td>
+                        <td><select id="pos-8" onchange="syncPitcher(this, 8); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-8" data-num="" data-avg=""></span></td>
+                        <td><span class="num-slot" id="num-8"></span></td>
+                        <td><span class="avg-slot" id="avg-8"></span></td>
+                        <td><select id="status-8" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-8')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-8')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-8')">X</button></td>
+                    </tr>
+                    <tr>
+                        <td><b>9번</b></td>
+                        <td><select id="pos-9" onchange="syncPitcher(this, 9); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                        <td><span class="name-slot" id="slot-9" data-num="" data-avg=""></span></td>
+                        <td><span class="num-slot" id="num-9"></span></td>
+                        <td><span class="avg-slot" id="avg-9"></span></td>
+                        <td><select id="status-9" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                        <td><button class="btn-dark btn-sm" onclick="moveUp('slot-9')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-9')">▼</button></td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-9')">X</button></td>
+                    </tr>
+                    
+                    <tr id="row-P" style="background:#fff0f0; border-top:2px solid #ffcccc;">
+                        <td><b style="color:red;">투수(P)</b></td>
+                        <td><select><option>P</option></select></td>
+                        <td><span class="name-slot" id="slot-P" data-num="" data-avg=""></span></td>
+                        <td><span class="num-slot" id="num-P"></span></td>
+                        <td><span class="avg-slot" id="avg-P"></span></td>
+                        <td><select id="status-P" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                        <td>-</td>
+                        <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-P')">X</button></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style="display: flex; gap: 10px; margin-top: 5px; margin-bottom: 15px;">
+                <button type="button" class="btn-blue-outline" style="margin: 0;" onclick="addBatter()">+ 타자 슬롯 추가 (전원 타자용)</button>
+                <button type="button" class="btn-dark" style="margin: 0; background-color: #6c757d;" onclick="removeLastBatter()">- 마지막 타자 슬롯 삭제</button>
+            </div>
+
+            <h3 style="margin-top:20px;">대기 명단</h3>
+            <div id="benchPool"></div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button type="button" class="btn-dark" style="margin: 0; background:#6c757d;" onclick="addBench()">+ 대기 슬롯 추가</button>
+                <button type="button" class="btn-dark" style="margin: 0; background:#6c757d;" onclick="removeLastBench()">- 마지막 대기 슬롯 삭제</button>
+            </div>
+            
+            <button type="button" class="btn-reset" onclick="resetLineup()">라인업 초기화 (참석자로 돌려보내기)</button>
+        </div>
+    </div>
+
+    <div class="ground-wrapper">
+        <h3>4. 그라운드 뷰 (수비 위치 및 대기 확인)</h3>
+        <div class="field-container">
+            <div class="diamond"></div>
+            <div class="pos-badge" id="field-C"><span class="pos-title">C (포수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-P"><span class="pos-title">P (투수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-1B"><span class="pos-title">1B (1루수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-2B"><span class="pos-title">2B (2루수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-SS"><span class="pos-title">SS (유격수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-3B"><span class="pos-title">3B (3루수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-LF"><span class="pos-title">LF (좌익수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-CF"><span class="pos-title">CF (중견수)</span><span class="p-name"></span></div>
+            <div class="pos-badge" id="field-RF"><span class="pos-title">RF (우익수)</span><span class="p-name"></span></div>
+        </div>
+        <div class="extra-zone">
+            <div class="dh-box">
+                <span class="zone-title" style="color:#ff9800;">지명타자 (DH)</span>
+                <span id="field-DH" class="p-name" style="font-weight:bold; color:#333;"></span>
+            </div>
+            <div class="bench-box">
+                <span class="zone-title" style="color:#607d8b;">대기 인원 (벤치)</span>
+                <span id="field-bench" class="p-name" style="color:#555;"></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="printArea"></div>
+
+    <div class="footer-btns">
+        <button type="button" class="btn-large" style="background-color: #333; color: white;" onclick="saveToFile()">내용 파일로 저장</button>
+        <button type="button" class="btn-large" style="background-color: #28a745; color: white;" onclick="prepareAndPrint()">PDF로 저장 (인쇄)</button>
+    </div>
+
+    <script>
+        var batterCount = 9; 
+        var benchIndex = 0;  
+
+        function parsePlayerData(raw) {
+            var str = raw.trim();
+            var name = "", num = "", avg = "";
+
+            var parts = str.split(/\s+/);
+            var lastPart = parts[parts.length - 1];
+
+            if (/^0?\.\d{1,3}$/.test(lastPart)) {
+                avg = lastPart;
+                if(avg.startsWith('.')) avg = '0' + avg; 
+                if(avg.length === 4) avg += '0'; 
+                if(avg.length === 3) avg += '00'; 
+                parts.pop(); 
+                str = parts.join(' ');
+            }
+
+            var match = str.match(/^(.*?)(\d*)$/);
+            if(match) {
+                name = match[1].trim();
+                num = match[2];
+            } else {
+                name = str;
+            }
+
+            return { name: name, num: num, avg: avg };
+        }
+
+        document.getElementById('nameInput').addEventListener('keypress', function(e) {
+            if(e.key === 'Enter') addSingle();
+        });
+
+        function addSingle() {
+            var input = document.getElementById('nameInput');
+            if(input.value.trim() !== '') {
+                createItemInPool1(input.value.trim());
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        function addBulk() {
+            var txt = document.getElementById('bulkInput').value;
+            var groups = txt.split(/[\n,]+/);
+            
+            for (var g = 0; g < groups.length; g++) {
+                var groupStr = groups[g].trim();
+                if (!groupStr) continue;
+                
+                var rawTokens = groupStr.split(/\s+/);
+                var currentPlayerTokens = [];
+                
+                for(var i = 0; i < rawTokens.length; i++) {
+                    var token = rawTokens[i].trim();
+                    if(token === '') continue;
+                    
+                    var isAvg = /^0?\.\d{1,3}$/.test(token);
+                    var isNum = /^\d{1,3}$/.test(token); 
+                    var hasAttachedNum = /^[^\d\.]+(\d+)$/.test(token); 
+                    var isAlpha = /^[a-zA-Z]+$/.test(token);
+                    
+                    currentPlayerTokens.push(token);
+                    
+                    var nextToken = (i + 1 < rawTokens.length) ? rawTokens[i+1].trim() : null;
+                    var breakHere = false;
+                    
+                    if (nextToken) {
+                        var nextIsAvg = /^0?\.\d{1,3}$/.test(nextToken);
+                        var nextIsNum = /^\d{1,3}$/.test(nextToken);
+                        var nextHasAttachedNum = /^[^\d\.]+(\d+)$/.test(nextToken);
+                        var nextIsAlpha = /^[a-zA-Z]+$/.test(nextToken);
+                        
+                        if (isAvg) {
+                            breakHere = true;
+                        } else if ((isNum || hasAttachedNum) && !nextIsAvg) {
+                            breakHere = true;
+                        } else if (!isNum && !isAvg && !hasAttachedNum && !nextIsNum && !nextIsAvg && !nextHasAttachedNum) {
+                            if (isAlpha && nextIsAlpha) {
+                                breakHere = false; 
+                            } else {
+                                breakHere = true;  
+                            }
+                        }
+                    } else {
+                        breakHere = true;
+                    }
+                    
+                    if (breakHere) {
+                        var combined = currentPlayerTokens.join(' ');
+                        createItemInPool1(combined);
+                        currentPlayerTokens = [];
+                    }
+                }
+            }
+            document.getElementById('bulkInput').value = '';
+        }
+
+        function resetPool1() {
+            if(confirm("전체 선수단 명단을 모두 삭제하시겠습니까?\n(오른쪽으로 넘어간 인원은 유지됩니다)")) {
+                document.getElementById('pool1').innerHTML = '';
+            }
+        }
+
+        // --- 신규: 1번 전체 명단 이름순 정렬 기능 ---
+        function sortPool1() {
+            var pool = document.getElementById('pool1');
+            var items = Array.from(pool.querySelectorAll('.item'));
+            
+            items.sort(function(a, b) {
+                var nameA = a.querySelector('.player-name').innerText;
+                var nameB = b.querySelector('.player-name').innerText;
+                return nameA.localeCompare(nameB);
+            });
+            
+            pool.innerHTML = '';
+            items.forEach(function(item) {
+                pool.appendChild(item);
+            });
+        }
+        // ---------------------------------------------
+
+        function resetPool2() {
+            if(confirm("참석자 명단을 초기화하시겠습니까?\n(이 곳에 있는 선수들이 1번 '전체 명단'으로 돌아갑니다)")) {
+                var pool2 = document.getElementById('pool2');
+                var items = pool2.querySelectorAll('.item');
+                for(var i = 0; i < items.length; i++) {
+                    var nameEl = items[i].querySelector('.player-name');
+                    var numEl = items[i].querySelector('.badge:not(.badge-avg)');
+                    var avgStr = items[i].getAttribute('data-avg') || '';
+                    
+                    var name = nameEl ? nameEl.innerText : '';
+                    var num = numEl ? numEl.innerText : '';
+                    if(name) {
+                        var combined = name + (num ? " " + num : "") + (avgStr ? " " + avgStr : "");
+                        createItemInPool1(combined);
+                    }
+                }
+                pool2.innerHTML = '';
+            }
+        }
+
+        function sortPool2(type) {
+            var pool = document.getElementById('pool2');
+            var items = Array.from(pool.querySelectorAll('.item'));
+            
+            items.sort(function(a, b) {
+                if (type === 'name') {
+                    var nameA = a.querySelector('.player-name').innerText;
+                    var nameB = b.querySelector('.player-name').innerText;
+                    return nameA.localeCompare(nameB);
+                } else if (type === 'avg') {
+                    var avgA = parseFloat(a.getAttribute('data-avg')) || 0;
+                    var avgB = parseFloat(b.getAttribute('data-avg')) || 0;
+                    return avgB - avgA;
+                }
+            });
+            
+            pool.innerHTML = '';
+            items.forEach(function(item) {
+                pool.appendChild(item);
+            });
+        }
+
+        function removePlayerFromPool1(btnElement) {
+            btnElement.parentNode.parentNode.remove();
+        }
+
+        function createItemInPool1(rawStr) {
+            var data = parsePlayerData(rawStr);
+            var div = document.createElement('div');
+            div.className = 'item';
+            var numHtml = data.num ? `<span class="badge">${data.num}</span>` : '';
+            var avgHtml = data.avg ? `<span class="badge badge-avg">${data.avg}</span>` : '';
+            
+            // 기존 span 속성에 player-name 클래스를 추가하여 정렬이 가능하도록 함
+            div.innerHTML = `
+                <div><span class="player-name" style="font-weight:bold;">${data.name}</span> ${numHtml} ${avgHtml}</div>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn-move" style="padding:4px 8px;" onclick="moveToPool2('${data.name}', '${data.num}', '${data.avg}', this.parentNode.parentNode)">참석</button>
+                    <button class="btn-del" style="padding:4px 8px;" onclick="removePlayerFromPool1(this)">X</button>
+                </div>
+            `;
+            document.getElementById('pool1').appendChild(div);
+        }
+
+        function moveToPool2(name, num, avg, element) {
+            element.remove();
+            createItemInPool2(name, num, avg);
+        }
+
+        function updatePool2Selects() {
+            var items = document.getElementById('pool2').querySelectorAll('.item');
+            items.forEach(function(item) {
+                var select = item.querySelector('.target-select');
+                var currentVal = select.value;
+
+                var options = '<option value="auto">자동 빈자리</option>';
+                for(var i = 1; i <= batterCount; i++) options += `<option value="slot-${i}">${i}번 타자</option>`;
+                options += '<option value="slot-P">투수 (단독)</option>';
+                
+                var benches = document.querySelectorAll('.bench-name');
+                for(var j = 0; j < benches.length; j++) {
+                    options += `<option value="${benches[j].id}">대기 ${j + 1}번</option>`;
+                }
+
+                select.innerHTML = options;
+                if(select.querySelector(`option[value="${currentVal}"]`)) {
+                    select.value = currentVal;
+                }
+            });
+        }
+
+        function createItemInPool2(name, num, avg) {
+            var div = document.createElement('div');
+            div.className = 'item';
+            div.setAttribute('data-avg', avg);
+            
+            var numHtml = num ? `<span class="badge">${num}</span>` : '';
+            var avgHtml = avg ? `<span class="badge badge-avg">${avg}</span>` : '';
+
+            div.innerHTML = `
+                <div style="min-width:70px;"><span class="player-name" style="font-weight:bold; color:#007bff;">${name}</span> ${numHtml} ${avgHtml}</div>
+                <div style="display:flex; gap:5px; align-items:center;">
+                    <select class="target-select"></select>
+                    <button class="btn-add" style="padding:4px 8px;" onclick="assignLineup('${name}', '${num}', '${avg}', this.parentNode.parentNode)">이동</button>
+                    <button class="btn-del" style="padding:4px 8px;" onclick="backToPool1('${name} ${num} ${avg}', this.parentNode.parentNode)">X</button>
+                </div>
+            `;
+            document.getElementById('pool2').appendChild(div);
+            updatePool2Selects();
+        }
+
+        function backToPool1(rawStr, element) {
+            element.remove();
+            createItemInPool1(rawStr);
+        }
+
+        function assignLineup(name, num, avg, element) {
+            var selectVal = element.querySelector('.target-select').value;
+            var targetSlot = null;
+
+            if (selectVal === 'auto') {
+                for(var i = 1; i <= batterCount; i++) {
+                    var s = document.getElementById('slot-' + i);
+                    if(s && s.innerText === '') { targetSlot = s; break; }
+                }
+                if(!targetSlot) {
+                    var p = document.getElementById('slot-P');
+                    if(p && p.innerText === '') targetSlot = p;
+                }
+                if(!targetSlot) {
+                    var benches = document.querySelectorAll('.bench-name');
+                    for(var j = 0; j < benches.length; j++) {
+                        if(benches[j].innerText === '') { targetSlot = benches[j]; break; }
+                    }
+                }
+            } else {
+                targetSlot = document.getElementById(selectVal);
+                if(targetSlot && targetSlot.innerText !== '') {
+                    alert('해당 자리에 이미 선수가 있습니다. X를 눌러 비워주세요.');
+                    return;
+                }
+            }
+
+            if(targetSlot) {
+                targetSlot.innerText = name;
+                targetSlot.setAttribute('data-num', num);
+                targetSlot.setAttribute('data-avg', avg);
+                
+                var numSlotId = targetSlot.id.replace('slot-', 'num-').replace('bench-', 'bench-num-');
+                var numSlot = document.getElementById(numSlotId);
+                if(numSlot) numSlot.innerText = num;
+                
+                var avgSlotId = targetSlot.id.replace('slot-', 'avg-').replace('bench-', 'bench-avg-');
+                var avgSlot = document.getElementById(avgSlotId);
+                if(avgSlot) avgSlot.innerText = avg;
+
+                element.remove();
+                refreshPitcherSync();
+                updateFieldView();
+            } else {
+                alert('자리를 찾을 수 없습니다.');
+            }
+        }
+
+        function syncPitcher(selectEl, slotNum) {
+            if(selectEl.value === 'P') {
+                var nameSlot = document.getElementById('slot-' + slotNum);
+                var playerName = nameSlot.innerText;
+                var playerNum = nameSlot.getAttribute('data-num') || '';
+                var playerAvg = nameSlot.getAttribute('data-avg') || '';
+                
+                if(playerName !== '') {
+                    var pSlot = document.getElementById('slot-P');
+                    pSlot.innerText = playerName;
+                    pSlot.setAttribute('data-num', playerNum);
+                    pSlot.setAttribute('data-avg', playerAvg);
+                    
+                    document.getElementById('num-P').innerText = playerNum;
+                    document.getElementById('avg-P').innerText = playerAvg;
+                }
+            }
+        }
+
+        function refreshPitcherSync() {
+            for(var i = 1; i <= batterCount; i++) {
+                var posSel = document.getElementById('pos-' + i);
+                if(posSel && posSel.value === 'P') {
+                    var nameSlot = document.getElementById('slot-' + i);
+                    if(nameSlot.innerText !== '') {
+                        var pSlot = document.getElementById('slot-P');
+                        pSlot.innerText = nameSlot.innerText;
+                        pSlot.setAttribute('data-num', nameSlot.getAttribute('data-num'));
+                        pSlot.setAttribute('data-avg', nameSlot.getAttribute('data-avg'));
+                        
+                        document.getElementById('num-P').innerText = nameSlot.getAttribute('data-num');
+                        document.getElementById('avg-P').innerText = nameSlot.getAttribute('data-avg');
+                    }
+                }
+            }
+        }
+
+        function removeFromLineup(slotId) {
+            var slot = document.getElementById(slotId);
+            if(slot && slot.innerText !== '') {
+                var name = slot.innerText;
+                var num = slot.getAttribute('data-num') || '';
+                var avg = slot.getAttribute('data-avg') || '';
+                
+                slot.innerText = '';
+                slot.setAttribute('data-num', '');
+                slot.setAttribute('data-avg', '');
+                
+                var numSlotId = slotId.replace('slot-', 'num-').replace('bench-', 'bench-num-');
+                var numSlot = document.getElementById(numSlotId);
+                if(numSlot) numSlot.innerText = '';
+                
+                var avgSlotId = slotId.replace('slot-', 'avg-').replace('bench-', 'bench-avg-');
+                var avgSlot = document.getElementById(avgSlotId);
+                if(avgSlot) avgSlot.innerText = '';
+
+                var statusId = slotId.startsWith('slot-') ? slotId.replace('slot-', 'status-') : 'status-' + slotId;
+                var statusEl = document.getElementById(statusId);
+                if(statusEl) statusEl.value = '';
+                
+                if(slotId.startsWith('slot-') && slotId !== 'slot-P') {
+                    var posNum = slotId.split('-')[1];
+                    var posSel = document.getElementById('pos-' + posNum);
+                    if(posSel) posSel.value = '-';
+                }
+
+                createItemInPool2(name, num, avg);
+                updateFieldView();
+            }
+        }
+
+        function getMovementSequence() {
+            var seq = [];
+            for(var i = 1; i <= batterCount; i++) seq.push('slot-' + i);
+            var benches = document.querySelectorAll('.bench-name');
+            for(var j = 0; j < benches.length; j++) seq.push(benches[j].id);
+            return seq;
+        }
+
+        function moveUp(slotId) {
+            var seq = getMovementSequence();
+            var index = seq.indexOf(slotId);
+            if(index > 0) swapData(seq[index], seq[index - 1]);
+        }
+
+        function moveDown(slotId) {
+            var seq = getMovementSequence();
+            var index = seq.indexOf(slotId);
+            if(index !== -1 && index < seq.length - 1) swapData(seq[index], seq[index + 1]);
+        }
+
+        function swapData(id1, id2) {
+            var slot1 = document.getElementById(id1);
+            var slot2 = document.getElementById(id2);
+            var num1Slot = document.getElementById(id1.replace('slot-', 'num-').replace('bench-', 'bench-num-'));
+            var num2Slot = document.getElementById(id2.replace('slot-', 'num-').replace('bench-', 'bench-num-'));
+            var avg1Slot = document.getElementById(id1.replace('slot-', 'avg-').replace('bench-', 'bench-avg-'));
+            var avg2Slot = document.getElementById(id2.replace('slot-', 'avg-').replace('bench-', 'bench-avg-'));
+
+            var tempName = slot1.innerText;
+            slot1.innerText = slot2.innerText;
+            slot2.innerText = tempName;
+
+            var tempNumAttr = slot1.getAttribute('data-num');
+            slot1.setAttribute('data-num', slot2.getAttribute('data-num'));
+            slot2.setAttribute('data-num', tempNumAttr);
+            
+            var tempAvgAttr = slot1.getAttribute('data-avg');
+            slot1.setAttribute('data-avg', slot2.getAttribute('data-avg'));
+            slot2.setAttribute('data-avg', tempAvgAttr);
+
+            if(num1Slot && num2Slot) {
+                var tempNum = num1Slot.innerText;
+                num1Slot.innerText = num2Slot.innerText;
+                num2Slot.innerText = tempNum;
+            }
+            
+            if(avg1Slot && avg2Slot) {
+                var tempAvg = avg1Slot.innerText;
+                avg1Slot.innerText = avg2Slot.innerText;
+                avg2Slot.innerText = tempAvg;
+            }
+
+            var status1Id = id1.startsWith('slot-') ? id1.replace('slot-', 'status-') : 'status-' + id1;
+            var status2Id = id2.startsWith('slot-') ? id2.replace('slot-', 'status-') : 'status-' + id2;
+            var status1El = document.getElementById(status1Id);
+            var status2El = document.getElementById(status2Id);
+            if(status1El && status2El) {
+                var tempStatus = status1El.value;
+                status1El.value = status2El.value;
+                status2El.value = tempStatus;
+            }
+
+            refreshPitcherSync();
+            updateFieldView();
+        }
+
+        function resetLineup() {
+            if(confirm("선발 라인업과 대기 명단을 모두 비우시겠습니까?\n(선수들은 2번 '경기 참석자' 칸으로 돌아갑니다)")) {
+                for(var i = 1; i <= batterCount; i++) removeFromLineup('slot-' + i);
+                removeFromLineup('slot-P');
+                var benches = document.querySelectorAll('.bench-name');
+                for(var j = 0; j < benches.length; j++) removeFromLineup(benches[j].id);
+                updateFieldView();
+            }
+        }
+
+        function addBatter() {
+            batterCount++;
+            var tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>${batterCount}번</b></td>
+                <td><select id="pos-${batterCount}" onchange="syncPitcher(this, ${batterCount}); updateFieldView();"><option>-</option><option>P</option><option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option><option>LF</option><option>CF</option><option>RF</option><option>DH</option></select></td>
+                <td><span class="name-slot" id="slot-${batterCount}" data-num="" data-avg=""></span></td>
+                <td><span class="num-slot" id="num-${batterCount}"></span></td>
+                <td><span class="avg-slot" id="avg-${batterCount}"></span></td>
+                <td><select id="status-${batterCount}" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                <td><button class="btn-dark btn-sm" onclick="moveUp('slot-${batterCount}')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('slot-${batterCount}')">▼</button></td>
+                <td><button class="btn-del btn-sm" onclick="removeFromLineup('slot-${batterCount}')">X</button></td>
+            `;
+            var pRow = document.getElementById('row-P');
+            document.getElementById('lineupTable').insertBefore(tr, pRow);
+            
+            updatePool2Selects();
+        }
+
+        function removeLastBatter() {
+            if (batterCount <= 9) {
+                alert("기본 9번 타순까지는 삭제할 수 없습니다.");
+                return;
+            }
+            
+            var slotId = 'slot-' + batterCount;
+            var slotEl = document.getElementById(slotId);
+            
+            if (slotEl && slotEl.innerText !== '') {
+                removeFromLineup(slotId);
+            }
+            
+            if(slotEl) {
+                var tr = slotEl.closest('tr');
+                if(tr) tr.remove();
+            }
+            
+            batterCount--;
+            updatePool2Selects();
+            updateFieldView();
+        }
+
+        function addBench() {
+            benchIndex++;
+            var slotId = 'bench-' + benchIndex;
+            var numSlotId = 'bench-num-' + benchIndex;
+            var avgSlotId = 'bench-avg-' + benchIndex;
+            var statusId = 'status-bench-' + benchIndex;
+            var div = document.createElement('div');
+            div.className = 'item';
+            div.style.padding = '4px 10px';
+            div.innerHTML = `
+                <table style="margin:0; width:100%; border:none;">
+                    <tr>
+                        <td style="border:none; width:55px; text-align:left;">대기 ${benchIndex}</td>
+                        <td style="border:none;"><span class="name-slot bench-name" id="${slotId}" data-num="" data-avg=""></span></td>
+                        <td style="border:none; width:25px;"><span class="num-slot" id="${numSlotId}"></span></td>
+                        <td style="border:none; width:40px;"><span class="avg-slot" id="${avgSlotId}"></span></td>
+                        <td style="border:none; width:50px;"><select id="${statusId}" class="status-select"><option value="">-</option><option value="선출">선출</option><option value="중출">중출</option></select></td>
+                        <td style="border:none; width:65px;"><button class="btn-dark btn-sm" onclick="moveUp('${slotId}')">▲</button><button class="btn-dark btn-sm" onclick="moveDown('${slotId}')">▼</button></td>
+                        <td style="border:none; width:30px;"><button class="btn-del btn-sm" onclick="removeFromLineup('${slotId}')">X</button></td>
+                    </tr>
+                </table>
+            `;
+            document.getElementById('benchPool').appendChild(div);
+            
+            updatePool2Selects();
+        }
+
+        function removeLastBench() {
+            if (benchIndex <= 5) {
+                alert("기본 대기 슬롯 5칸은 삭제할 수 없습니다.");
+                return;
+            }
+            
+            var slotId = 'bench-' + benchIndex;
+            var slotEl = document.getElementById(slotId);
+            
+            if (slotEl && slotEl.innerText !== '') {
+                removeFromLineup(slotId);
+            }
+            
+            if(slotEl) {
+                var itemDiv = slotEl.closest('.item');
+                if(itemDiv) itemDiv.remove();
+            }
+            
+            benchIndex--;
+            updatePool2Selects();
+            updateFieldView();
+        }
+
+        function updateFieldView() {
+            var positions = ['C', 'P', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+            positions.forEach(function(p) {
+                var el = document.getElementById('field-' + p);
+                if(el) el.querySelector('.p-name').innerText = '';
+            });
+            document.getElementById('field-DH').innerText = '';
+            document.getElementById('field-bench').innerText = '';
+
+            for(var i=1; i<=batterCount; i++) {
+                var posSel = document.getElementById('pos-'+i);
+                if(!posSel) continue;
+                
+                var pos = posSel.value;
+                var name = document.getElementById('slot-'+i).innerText;
+                var num = document.getElementById('slot-'+i).getAttribute('data-num') || '';
+                var displayName = num ? name + '(' + num + ')' : name;
+
+                if(pos !== '-' && name !== '') {
+                    if(pos === 'DH') {
+                        document.getElementById('field-DH').innerText = displayName;
+                    } else if(pos !== 'P') {
+                        var fieldEl = document.getElementById('field-' + pos);
+                        if(fieldEl) {
+                            fieldEl.querySelector('.p-name').innerText = displayName;
+                        }
+                    }
+                }
+            }
+
+            var pName = document.getElementById('slot-P').innerText;
+            var pNum = document.getElementById('slot-P').getAttribute('data-num') || '';
+            if(pName !== '') {
+               var pDisplayName = pNum ? pName + '(' + pNum + ')' : pName;
+               var pField = document.getElementById('field-P');
+               if(pField) pField.querySelector('.p-name').innerText = pDisplayName;
+            }
+
+            var benchArray = [];
+            var benches = document.querySelectorAll('.bench-name');
+            benches.forEach(function(b) {
+                if(b.innerText !== '') {
+                    var bNum = b.getAttribute('data-num') || '';
+                    benchArray.push(bNum ? b.innerText + '(' + bNum + ')' : b.innerText);
+                }
+            });
+            document.getElementById('field-bench').innerText = benchArray.join(', ');
+        }
+
+        window.onload = function() {
+            var maxBatter = 0;
+            var slots = document.querySelectorAll('.name-slot');
+            slots.forEach(function(s) {
+                if(s.id.startsWith('slot-') && s.id !== 'slot-P') {
+                    var num = parseInt(s.id.replace('slot-', ''));
+                    if(!isNaN(num) && num > maxBatter) maxBatter = num;
+                }
+            });
+            if(maxBatter > 9) batterCount = maxBatter;
+
+            var existingBenches = document.querySelectorAll('.bench-name');
+            if(existingBenches.length === 0) {
+                addBench(); addBench(); addBench(); addBench(); addBench();
+            } else {
+                existingBenches.forEach(function(b) {
+                    var num = parseInt(b.id.replace('bench-', ''));
+                    if(!isNaN(num) && num > benchIndex) {
+                        benchIndex = num;
+                    }
+                });
+            }
+            updateFieldView();
+            updatePool2Selects();
+        };
+
+        function saveToFile() {
+            var inputs = document.querySelectorAll('input[type="text"], input[type="date"]');
+            inputs.forEach(function(input) {
+                input.setAttribute('value', input.value);
+            });
+
+            var textareas = document.querySelectorAll('textarea');
+            textareas.forEach(function(ta) {
+                ta.innerHTML = ta.value;
+            });
+
+            var selects = document.querySelectorAll('select');
+            selects.forEach(function(select) {
+                var options = select.options;
+                for(var i = 0; i < options.length; i++) {
+                    if(options[i].value === select.value) {
+                        options[i].setAttribute('selected', 'selected');
+                    } else {
+                        options[i].removeAttribute('selected');
+                    }
+                }
+            });
+
+            var html = document.documentElement.outerHTML;
+            var blob = new Blob([html], {type: "text/html;charset=utf-8"});
+            var a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            
+            var tName = document.getElementById('teamName').value || 'CNC 워리어스';
+            a.download = tName + "_라인업보드.html";
+            a.click();
+        }
+
+        function prepareAndPrint() {
+            var userAgent = navigator.userAgent.toLowerCase();
+            
+            if (userAgent.indexOf('kakaotalk') > -1 || userAgent.indexOf('line') > -1 || userAgent.indexOf('inapp') > -1) {
+                alert("🚨 현재 접속하신 앱(카카오톡 등)에서는 인쇄/PDF 기능을 지원하지 않습니다.\n\n[해결 방법]\n화면 우측 하단(또는 상단)의 [점 3개 메뉴 ⋮]를 누르신 후, '다른 브라우저로 열기(Safari 또는 Chrome)'를 선택하셔서 다시 시도해 주세요!");
+                return;
+            }
+
+            var teamName = document.getElementById('teamName').value || 'CNC 워리어스';
+            var tourName = document.getElementById('tourName').value || '';
+            
+            var dateVal = document.getElementById('gameDate').value;
+            var printDate = "년 월 일";
+            if(dateVal) {
+                var parts = dateVal.split('-');
+                if(parts.length === 3) {
+                    printDate = parts[0] + "년 " + parseInt(parts[1]) + "월 " + parseInt(parts[2]) + "일";
+                }
+            }
+
+            var printArea = document.getElementById('printArea');
+            
+            var lineupRows = '';
+            for(var i=1; i<=batterCount; i++) {
+                var posSel = document.getElementById('pos-'+i);
+                if(!posSel) continue;
+                
+                var pos = posSel.value;
+                if(pos === '-') pos = '';
+                var name = document.getElementById('slot-'+i).innerText;
+                var num = document.getElementById('slot-'+i).getAttribute('data-num') || '';
+                var statusEl = document.getElementById('status-'+i);
+                var status = statusEl ? statusEl.value : '';
+                
+                lineupRows += `<tr class="h-25"><td>${i}</td><td>${pos}</td><td>${name}</td><td>${num}</td><td>${status}</td></tr>`;
+            }
+            
+            var pName = document.getElementById('slot-P').innerText;
+            var pNum = document.getElementById('slot-P').getAttribute('data-num') || '';
+            var pStatusEl = document.getElementById('status-P');
+            var pStatus = pStatusEl ? pStatusEl.value : '';
+            lineupRows += `<tr class="h-25"><td>P</td><td>P</td><td>${pName}</td><td>${pNum}</td><td>${pStatus}</td></tr>`;
+
+            var benchRows = '';
+            var benches = document.querySelectorAll('.bench-name');
+            var printBenchCount = benches.length > 8 ? benches.length : 8;
+            for(var k=0; k<printBenchCount; k++) {
+                var bName = '', bNum = '', bStatus = '';
+                if(k < benches.length && benches[k].innerText !== '') {
+                    bName = benches[k].innerText;
+                    bNum = benches[k].getAttribute('data-num') || '';
+                    var statusId = 'status-' + benches[k].id;
+                    var statusEl = document.getElementById(statusId);
+                    if(statusEl) bStatus = statusEl.value;
+                }
+                benchRows += `<tr class="h-25"><td>${k+1}</td><td></td><td>${bName}</td><td>${bNum}</td><td>${bStatus}</td></tr>`;
+            }
+
+            var cardHTML = `
+                <div class="print-card">
+                    <table class="print-table">
+                        <tr><th width="30%">대회명</th><td colspan="3">${tourName}</td></tr>
+                        <tr><th>팀 명</th><td colspan="3" style="font-weight:bold; font-size:16px;">${teamName}</td></tr>
+                        <tr><th>일 시</th><td colspan="3">${printDate}</td></tr>
+                    </table>
+                    
+                    <table class="print-table">
+                        <tr><th width="15%">타순</th><th width="20%">수비위치</th><th width="30%">성 명</th><th width="15%">배번</th><th>비고</th></tr>
+                        ${lineupRows}
+                    </table>
+
+                    <table class="print-table">
+                        <tr><th width="15%">순번</th><th width="20%">수비위치</th><th width="30%">성 명</th><th width="15%">배번</th><th>비고</th></tr>
+                        ${benchRows}
+                    </table>
+                </div>
+            `;
+
+            printArea.innerHTML = cardHTML + cardHTML + cardHTML;
+            window.print();
+        }
+    </script>
+</body>
+</html>
